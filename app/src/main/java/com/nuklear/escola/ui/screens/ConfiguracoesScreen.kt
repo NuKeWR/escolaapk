@@ -5,6 +5,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.room.withTransaction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -546,7 +547,9 @@ private data class BackupData(
     val pagamentos: List<Pagamento>,
     val graduacoes: List<Graduacao>,
     val presencas: List<Presenca>,
-    val exportDate: String
+    val exportDate: String,
+    // Novo no backup: dados de reconhecimento facial. Nulo nos backups antigos.
+    val faceEmbeddings: List<FaceEmbedding>? = null
 )
 
 private suspend fun exportarBackupJson(ctx: Context, db: AppDatabase, uri: Uri): String {
@@ -557,7 +560,8 @@ private suspend fun exportarBackupJson(ctx: Context, db: AppDatabase, uri: Uri):
                 pagamentos = db.alunoDao().getAll().flatMap { db.pagamentoDao().getByAluno(it.id) },
                 graduacoes = db.alunoDao().getAll().flatMap { db.graduacaoDao().getByAluno(it.id) },
                 presencas = db.presencaDao().getAll(),
-                exportDate = LocalDateTime.now().toString()
+                exportDate = LocalDateTime.now().toString(),
+                faceEmbeddings = db.faceEmbeddingDao().getAll()
             )
             ctx.contentResolver.openOutputStream(uri)?.use { stream ->
                 stream.write(Gson().toJson(data).toByteArray(Charsets.UTF_8))
@@ -574,13 +578,55 @@ private suspend fun importarBackupJson(ctx: Context, db: AppDatabase, uri: Uri):
         try {
             val json = ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return@withContext "❌ Erro lendo arquivo"
             val data = Gson().fromJson(json, BackupData::class.java)
+                ?: return@withContext "❌ Arquivo de backup inválido"
 
-            data.alunos.forEach { db.alunoDao().insert(it.copy(id = 0)) }
-            data.pagamentos.forEach { db.pagamentoDao().insert(it.copy(id = 0)) }
-            data.graduacoes.forEach { db.graduacaoDao().insert(it.copy(id = 0)) }
-            data.presencas.forEach { db.presencaDao().insert(it.copy(id = 0)) }
+            // Evita duplicar dados: só importa em um app vazio.
+            if (db.alunoDao().getAll().isNotEmpty()) {
+                return@withContext "❌ O app já tem alunos cadastrados. Importe o backup somente em um app vazio, para não duplicar os dados."
+            }
 
-            "✅ Importados: ${data.alunos.size} alunos, ${data.pagamentos.size} pagamentos, ${data.graduacoes.size} graduações, ${data.presencas.size} presenças"
+            val faces = data.faceEmbeddings ?: emptyList()
+            var pagamentosOk = 0
+            var graduacoesOk = 0
+            var facesOk = 0
+            var ignorados = 0
+
+            // Tudo em uma transação: se algo falhar, nada fica pela metade.
+            db.withTransaction {
+                // Cada aluno ganha um ID novo; guardamos ID antigo -> ID novo
+                // para ligar pagamentos, graduações e rostos ao aluno certo.
+                val novoIdPorAntigo = HashMap<Long, Long>()
+                data.alunos.forEach { aluno ->
+                    novoIdPorAntigo[aluno.id] = db.alunoDao().insert(aluno.copy(id = 0))
+                }
+
+                data.pagamentos.forEach { pag ->
+                    val novoId = novoIdPorAntigo[pag.alunoId]
+                    if (novoId != null) {
+                        db.pagamentoDao().insert(pag.copy(id = 0, alunoId = novoId))
+                        pagamentosOk++
+                    } else ignorados++
+                }
+                data.graduacoes.forEach { grad ->
+                    val novoId = novoIdPorAntigo[grad.alunoId]
+                    if (novoId != null) {
+                        db.graduacaoDao().insert(grad.copy(id = 0, alunoId = novoId))
+                        graduacoesOk++
+                    } else ignorados++
+                }
+                faces.forEach { face ->
+                    val novoId = novoIdPorAntigo[face.alunoId]
+                    if (novoId != null) {
+                        db.faceEmbeddingDao().insert(face.copy(id = 0, alunoId = novoId))
+                        facesOk++
+                    } else ignorados++
+                }
+                // Presenças são ligadas ao aluno pelo nome, não precisam de ajuste.
+                data.presencas.forEach { db.presencaDao().insert(it.copy(id = 0)) }
+            }
+
+            val aviso = if (ignorados > 0) "\n⚠️ $ignorados registros sem aluno correspondente foram ignorados." else ""
+            "✅ Importados: ${data.alunos.size} alunos, $pagamentosOk pagamentos, $graduacoesOk graduações, ${data.presencas.size} presenças, $facesOk rostos$aviso"
         } catch (e: Exception) {
             "❌ Erro: ${e.message}"
         }

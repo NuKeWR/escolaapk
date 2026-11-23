@@ -207,8 +207,10 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "escola_nuklear.db"
-                ).fallbackToDestructiveMigration()
-                 .build().also { INSTANCE = it }
+                ).build().also { INSTANCE = it }
+                // IMPORTANTE: não usar fallbackToDestructiveMigration().
+                // Se o banco mudar (nova coluna/tabela), suba "version" acima e
+                // crie uma Migration com .addMigrations(...) para NÃO apagar os dados.
             }
         }
     }

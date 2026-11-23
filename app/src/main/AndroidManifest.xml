@@ -14,7 +14,7 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:label="Escola Nuklear"
+        android:label="Escola Nuklear 2"
         android:supportsRtl="true"
         android:theme="@style/Theme.EscolaNuklear"
         tools:targetApi="34">

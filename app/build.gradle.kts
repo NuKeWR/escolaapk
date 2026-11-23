@@ -9,11 +9,27 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.nuklear.escola"
+        // Pacote novo (2): permite instalar ao lado do app antigo (com.nuklear.escola),
+        // sem desinstalar nada, para conferir o backup antes de apagar o antigo.
+        applicationId = "com.nuklear.escola2"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
+    }
+
+    // Chave de assinatura FIXA, lida das variáveis de ambiente (segredos do GitHub).
+    // Sem as variáveis (ex.: compilando no Android Studio), usa a chave de debug.
+    val usarChaveFixa = System.getenv("KEYSTORE_PATH") != null
+    signingConfigs {
+        if (usarChaveFixa) {
+            create("fixa") {
+                storeFile = file(System.getenv("KEYSTORE_PATH"))
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -23,6 +39,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = if (usarChaveFixa) signingConfigs.getByName("fixa")
+                            else signingConfigs.getByName("debug")
         }
     }
 
