@@ -1,71 +1,64 @@
-# ☢ Escola Nuklear — Android Studio (Kotlin Nativo)
+# ☢ Escola Nuklear
 
-Projeto **100% Kotlin + Jetpack Compose** pronto para abrir no Android Studio e gerar o APK.
+App Android (Kotlin + Jetpack Compose) para a gestão da Escola Nuklear de Artes Marciais:
+alunos, presenças, pagamentos, inadimplência e reconhecimento facial. Os dados ficam só no celular.
 
-## 🚀 Como Compilar o APK
+- Pacote: `com.nuklear.escola2` · Versão atual: ver `versionName` em `app/build.gradle.kts`
+- Android 8.0 ou mais novo (minSdk 26)
 
-### Passo 1 — Baixe o Android Studio
-👉 https://developer.android.com/studio
+## Como gerar o APK (pelo GitHub, sem Android Studio)
 
-### Passo 2 — Abra o projeto
-1. Abra o Android Studio
-2. **File → Open** → Selecione a pasta `EscolaNuklearAndroid`
-3. Aguarde o Gradle sincronizar (~2-5 min na primeira vez)
+1. Envie as alterações para a branch `main` (ou use **Actions → Compilar APK → Run workflow**).
+2. Abra a aba **Actions**, entre na última execução e, em **Artifacts**, baixe **EscolaNuklear-APK**.
+3. Instale o APK no celular. Como a assinatura é sempre a mesma, ele atualiza **por cima** do app instalado.
 
-### Passo 3 — Gerar o APK
-- **Build → Build Bundle(s) / APK(s) → Build APK(s)**
-- O APK fica em: `app/build/outputs/apk/debug/app-debug.apk`
+A assinatura vem de 4 segredos do repositório (**Settings → Secrets and variables → Actions**):
+`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`.
 
-### Passo 4 — Instalar no celular
-- Conecte o celular via USB **ou**
-- Copie o APK para o celular e instale manualmente
+> ⚠️ Guarde o arquivo `escola.keystore` e as senhas em pelo menos dois lugares (fora do GitHub).
+> Sem a mesma chave, o Android recusa a atualização e é preciso desinstalar o app (perde os dados).
+> Nunca envie a chave para este repositório (ele é público; o `.gitignore` já bloqueia `*.keystore`).
 
----
+## Regras para atualizar sem perder os dados dos alunos
 
-## 📱 Funcionalidades
+1. **Suba o `versionCode`** em `app/build.gradle.kts` a cada versão nova.
+2. **Mantenha o `applicationId`** (`com.nuklear.escola2`) e a mesma chave de assinatura.
+3. **Se mudar o banco** (nova coluna ou tabela em `Entities.kt`): suba o `version` do `AppDatabase`
+   e crie uma `Migration`. Não use `fallbackToDestructiveMigration()`: ele apaga tudo.
+4. Antes de atualizar, faça **Configurações → Exportar Backup JSON**.
 
-| Tela | Funcionalidade |
+## Funcionalidades
+
+| Tela | O que faz |
 |---|---|
-| Dashboard | Totais, financeiro, status, horários, aniversariantes |
-| Alunos | CRUD completo, filtro por horário/ativo, busca |
-| Cadastrar | 15 campos + foto via câmera/galeria |
-| Editar Aluno | Editar dados, graduações, links para pagamento/frequência |
-| Presenças | Checkbox por aluno, filtro data/horário, salvar em lote |
-| Pagamentos | Registrar, editar, excluir, histórico por aluno |
-| Inadimplentes | Lista filtrada, meses de atraso, link para pagamento |
-| Relatório Frequência | Ranking com medalhas, frequência mensal |
-| Frequência Aluno | Lista de presenças, excluir individual/todas |
-| Histórico Financeiro | Receita mensal, total por aluno |
+| Dashboard | Totais, financeiro do mês, status, horários, aniversariantes (cartões levam às telas) |
+| Alunos / Cadastrar / Editar | Cadastro completo com foto, graduações, ativar/inativar |
+| Pagamento rápido | Busca o aluno, registra o pagamento e abre o recibo |
+| Pagamentos / Recibo | Histórico por aluno, edição, recibo em imagem para compartilhar |
+| Inadimplentes | Lista por horário e botão **Cobrar no WhatsApp** |
+| Presenças e relatórios | Presença por data/horário, ranking e frequência mensal |
+| Reconhecimento facial | Presença e cadastro de rostos (câmera), cadastro de rostos em lote |
+| Aniversariantes | Aniversariantes do mês |
+| Histórico financeiro | Receita por mês e por aluno |
+| Configurações | Backup JSON, importações do sistema antigo, **trava por PIN**, **mensagem de cobrança editável** |
 
-## 🛠 Stack
+A mensagem de cobrança usa os campos `{nome}`, `{aluno}`, `{mes}` e `{valor}`, preenchidos para cada aluno.
 
-- **Kotlin** + **Jetpack Compose** (UI nativa moderna)
-- **Room** (SQLite — mesmo esquema do projeto original)
-- **Navigation Compose** (navegação entre telas)
-- **CameraX** (câmera para fotos)
-- **Material 3** (design system)
-- Tema: **Vermelho (#D32F2F) + Preto (#1A1A1A)**
-
-## 📁 Estrutura
+## Estrutura
 
 ```
 app/src/main/java/com/nuklear/escola/
-├── MainActivity.kt              ← Navegação + Drawer
-├── data/
-│   ├── db/AppDatabase.kt       ← Room DAOs + Database
-│   └── model/Entities.kt       ← Aluno, Pagamento, Graduação, Presença
-└── ui/
-    ├── theme/Theme.kt          ← Cores vermelho/preto
-    ├── components/Components.kt ← Cards, TopBar, itens reutilizáveis
-    └── screens/
-        ├── DashboardScreen.kt
-        ├── AlunosScreen.kt
-        ├── CadastrarAlunoScreen.kt
-        ├── EditarAlunoScreen.kt
-        ├── PresencasScreen.kt
-        ├── PagamentosScreen.kt
-        ├── InadimplentesScreen.kt
-        ├── RelatorioFrequenciaScreen.kt
-        ├── FrequenciaAlunoScreen.kt
-        └── HistoricoFinanceiroScreen.kt
+├── MainActivity.kt        navegação, menu e trava por PIN
+├── data/                  banco (Room), modelos e mensagem de cobrança
+├── face/                  reconhecimento facial (ML Kit + FaceNet)
+├── notification/          avisos diários
+├── security/PinStore.kt   PIN do app
+└── ui/                    telas, componentes e tema
+tools/exportar_rostos_para_apk.py   exporta os rostos do sistema antigo (PC) para importar no app
+.github/workflows/build.yml         compila e assina o APK no GitHub
 ```
+
+## Compilar no Android Studio (opcional)
+
+Precisa de JDK 17. Abra a pasta do projeto e use **Build → Build APK(s)**. Sem os segredos do GitHub,
+o APK sai assinado com a chave de teste do computador e não atualiza por cima do app instalado pelo GitHub.
