@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.nuklear.escola.security.PinStore
+import com.nuklear.escola.data.MensagemCobranca
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -189,6 +190,9 @@ fun ConfiguracoesScreen(onMenuClick: () -> Unit) {
     var pinNovo by remember { mutableStateOf("") }
     var pinConfirma by remember { mutableStateOf("") }
 
+    // ─── Mensagem de cobrança (WhatsApp) ───
+    var msgCobranca by remember { mutableStateOf(MensagemCobranca.carregar(ctx)) }
+
     if (showPinDialog) {
         AlertDialog(
             onDismissRequest = { showPinDialog = false },
@@ -327,6 +331,53 @@ fun ConfiguracoesScreen(onMenuClick: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().height(46.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = NukPurple)
                 ) { Text("🥋 Importar graduacoes.csv") }
+            }
+
+            // ─── MENSAGEM DE COBRANÇA (WHATSAPP) ───
+            NukCard {
+                SectionTitle("MENSAGEM DE COBRANÇA", "💬")
+                Text(
+                    "Texto enviado pelo botão \"Cobrar no WhatsApp\" (tela Inadimplentes). " +
+                    "O app troca sozinho: {nome} (responsável ou aluno, só os dois primeiros nomes), " +
+                    "{aluno}, {mes} (primeiro mês em aberto) e {valor} (mensalidade).",
+                    fontSize = 11.sp, color = NukLightGray,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                OutlinedTextField(
+                    value = msgCobranca,
+                    onValueChange = { msgCobranca = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 8,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = NukPurple, unfocusedBorderColor = NukMedGray,
+                        focusedTextColor = NukWhite, unfocusedTextColor = NukWhite)
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            MensagemCobranca.salvar(ctx, msgCobranca)
+                            Toast.makeText(ctx, "✅ Mensagem salva", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = NukGreen)
+                    ) { Text("💾 Salvar") }
+                    Button(
+                        onClick = {
+                            MensagemCobranca.restaurarPadrao(ctx)
+                            msgCobranca = MensagemCobranca.PADRAO
+                            Toast.makeText(ctx, "Mensagem padrão restaurada", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = NukMedGray)
+                    ) { Text("Restaurar padrão") }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Prévia (exemplo):", fontSize = 11.sp, color = NukLightGray)
+                Text(
+                    MensagemCobranca.montar(msgCobranca, "Maria da Silva Santos", "João Pedro Souza", "09/2026", 80.0),
+                    fontSize = 12.sp, color = NukWhite
+                )
             }
 
             // ─── TRAVA POR PIN ───

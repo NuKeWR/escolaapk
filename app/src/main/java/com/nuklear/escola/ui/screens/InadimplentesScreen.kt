@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nuklear.escola.data.MensagemCobranca
 import com.nuklear.escola.data.db.AppDatabase
 import com.nuklear.escola.data.model.Aluno
 import com.nuklear.escola.ui.components.*
@@ -25,7 +26,8 @@ import java.time.LocalDate
 data class Inadimplente(
     val aluno: Aluno,
     val status: String,
-    val mesesAtraso: Int
+    val mesesAtraso: Int,
+    val mesCobrado: String = ""   // primeiro mês em aberto, ex.: "09/2026"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,7 +69,7 @@ fun InadimplentesScreen(
                     (ay - uy) * 12 + (am - um)
                 }
                 val status = if (ult == null) "🔴 Sem pagamento" else "🔴 Atrasado"
-                Inadimplente(a, status, meses)
+                Inadimplente(a, status, meses, MensagemCobranca.mesEmAberto(ult))
             }
         }
     }
@@ -117,12 +119,15 @@ fun InadimplentesScreen(
                         Text("📱 ${item.aluno.telefone}", fontSize = 11.sp, color = NukBlue)
                         Button(
                             onClick = {
+                                // Fala com o responsável (ou com o aluno, se não houver responsável)
                                 val quem = item.aluno.responsavel.ifBlank { item.aluno.nome }
-                                val valorTxt = "%.2f".format(item.aluno.valorMensalidade)
-                                val msg = "Olá, $quem! Tudo bem? Aqui é da Escola Nuklear de Artes Marciais. " +
-                                    "Estamos passando para lembrar que a mensalidade de ${item.aluno.nome} " +
-                                    "(R$ $valorTxt) está em aberto. Pode nos confirmar o pagamento? " +
-                                    "Se já pagou, é só desconsiderar. Obrigado! 🥋"
+                                val msg = MensagemCobranca.montar(
+                                    modelo = MensagemCobranca.carregar(ctx),
+                                    nome = quem,
+                                    aluno = item.aluno.nome,
+                                    mes = item.mesCobrado,
+                                    valor = item.aluno.valorMensalidade
+                                )
                                 abrirWhatsApp(ctx, item.aluno.telefone, msg)
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
