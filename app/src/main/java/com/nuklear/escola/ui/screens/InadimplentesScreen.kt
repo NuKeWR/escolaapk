@@ -1,5 +1,10 @@
 package com.nuklear.escola.ui.screens
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -110,6 +115,19 @@ fun InadimplentesScreen(
                         fontSize = 11.sp, color = NukLightGray)
                     if (item.aluno.telefone.isNotBlank()) {
                         Text("📱 ${item.aluno.telefone}", fontSize = 11.sp, color = NukBlue)
+                        Button(
+                            onClick = {
+                                val quem = item.aluno.responsavel.ifBlank { item.aluno.nome }
+                                val valorTxt = "%.2f".format(item.aluno.valorMensalidade)
+                                val msg = "Olá, $quem! Tudo bem? Aqui é da Escola Nuklear de Artes Marciais. " +
+                                    "Estamos passando para lembrar que a mensalidade de ${item.aluno.nome} " +
+                                    "(R$ $valorTxt) está em aberto. Pode nos confirmar o pagamento? " +
+                                    "Se já pagou, é só desconsiderar. Obrigado! 🥋"
+                                abrirWhatsApp(ctx, item.aluno.telefone, msg)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                        ) { Text("💬 Cobrar no WhatsApp", color = Color.White) }
                     }
                     Button(
                         onClick = { onPagamentos(item.aluno.id) },
@@ -119,5 +137,18 @@ fun InadimplentesScreen(
                 }
             }
         }
+    }
+}
+
+// Abre o WhatsApp na conversa com o telefone do aluno, com a mensagem já escrita.
+private fun abrirWhatsApp(ctx: Context, telefone: String, mensagem: String) {
+    var numero = telefone.filter { it.isDigit() }.trimStart('0')
+    // Telefone sem código do país (DDD + número = 10 ou 11 dígitos): acrescenta o 55 do Brasil
+    if (numero.length <= 11) numero = "55$numero"
+    try {
+        val texto = java.net.URLEncoder.encode(mensagem, "UTF-8").replace("+", "%20")
+        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$numero?text=$texto")))
+    } catch (e: Exception) {
+        Toast.makeText(ctx, "Não foi possível abrir o WhatsApp", Toast.LENGTH_SHORT).show()
     }
 }

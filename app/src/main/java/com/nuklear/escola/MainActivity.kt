@@ -25,13 +25,33 @@ import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.nuklear.escola.ui.screens.*
 import com.nuklear.escola.ui.theme.*
+import com.nuklear.escola.ui.components.LocalVoltar
+import com.nuklear.escola.security.PinStore
 import com.nuklear.escola.notification.NotificationHelper
 import com.nuklear.escola.notification.DailyCheckWorker
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    // Trava por PIN: bloqueia ao abrir e depois de ficar 3 minutos fora do app.
+    private val bloqueado = mutableStateOf(false)
+    private var ultimoStop = 0L
+
+    override fun onStop() {
+        super.onStop()
+        ultimoStop = System.currentTimeMillis()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (ultimoStop > 0L && PinStore.temPin(this) &&
+            System.currentTimeMillis() - ultimoStop > 180_000L) {
+            bloqueado.value = true
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        bloqueado.value = PinStore.temPin(this)
 
         // Configurar notificações
         NotificationHelper.createChannels(this)
@@ -43,7 +63,12 @@ class MainActivity : ComponentActivity() {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 100)
         }
 
-        setContent { EscolaNuklearTheme { MainApp() } }
+        setContent {
+            EscolaNuklearTheme {
+                if (bloqueado.value) TelaPin(onDesbloqueado = { bloqueado.value = false })
+                else MainApp()
+            }
+        }
     }
 }
 
@@ -53,6 +78,11 @@ fun MainApp() {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route ?: "dashboard"
+
+    // Telas de detalhe ganham a seta "←" no topo para voltar
+    val ehDetalhe = listOf("editar", "pagamentos", "recibo", "frequencia", "presencas_data")
+        .any { currentRoute.startsWith("$it/") }
+    val acaoVoltar: (() -> Unit)? = if (ehDetalhe) ({ navController.popBackStack() }) else null
 
     val menuItems = listOf(
         "📊  Dashboard" to "dashboard",
@@ -109,7 +139,7 @@ fun MainApp() {
                                 unselectedContainerColor = NukBlack, selectedContainerColor = NukPurpleDark))
                     }
                     Spacer(Modifier.weight(1f))
-                    Text("v1.2 — Escola Nuklear", fontSize = 11.sp, color = NukLightGray, modifier = Modifier.padding(16.dp))
+                    Text("v1.1.0 — Escola Nuklear", fontSize = 11.sp, color = NukLightGray, modifier = Modifier.padding(16.dp))
                 }
             }
         }
@@ -142,11 +172,21 @@ fun MainApp() {
             }
         ) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {
+              CompositionLocalProvider(LocalVoltar provides acaoVoltar) {
                 NavHost(navController = navController, startDestination = "dashboard") {
-                    composable("dashboard") { DashboardScreen(onMenuClick = openMenu) }
+                    composable("dashboard") {
+                        DashboardScreen(
+                            onMenuClick = openMenu,
+                            onNavigate = { rota ->
+                                navController.navigate(rota) {
+                                    popUpTo("dashboard") { saveState = true }; launchSingleTop = true; restoreState = true
+                                }
+                            }
+                        )
+                    }
                     composable("alunos") { AlunosScreen(onMenuClick = openMenu, onAlunoClick = { id -> navController.navigate("editar/$id") }) }
                     composable("cadastrar") { CadastrarAlunoScreen(onMenuClick = openMenu, onSaved = { navController.navigate("alunos") { popUpTo("dashboard") } }) }
-                    composable("pagamento_rapido") { PagamentoRapidoScreen(onMenuClick = openMenu) }
+                    composable("pagamento_rapido") { PagamentoRapidoScreen(onMenuClick = openMenu, onRecibo = { id -> navController.navigate("recibo/$id") }) }
                     composable("editar/{alunoId}", arguments = listOf(navArgument("alunoId") { type = NavType.LongType })) { bs ->
                         EditarAlunoScreen(alunoId = bs.arguments?.getLong("alunoId") ?: 0L, onMenuClick = openMenu,
                             onPagamentos = { id -> navController.navigate("pagamentos/$id") },
@@ -167,6 +207,7 @@ fun MainApp() {
                     composable("historico") { HistoricoFinanceiroScreen(onMenuClick = openMenu) }
                     composable("configuracoes") { ConfiguracoesScreen(onMenuClick = openMenu) }
                 }
+              }
             }
         }
     }

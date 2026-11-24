@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -102,11 +103,16 @@ fun SectionTitle(text: String, emoji: String = "") {
     )
 }
 
+// Quando não é nulo, as barras do topo mostram uma seta "←" para voltar.
+// A MainActivity liga isso nas telas de detalhe (recibo, pagamentos, editar aluno...).
+val LocalVoltar = compositionLocalOf<(() -> Unit)?> { null }
+
 @Composable
 fun NukTopBar(
     title: String,
     onMenuClick: () -> Unit
 ) {
+    val voltar = LocalVoltar.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = NukPurple,
@@ -118,6 +124,11 @@ fun NukTopBar(
                 .padding(horizontal = 8.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (voltar != null) {
+                IconButton(onClick = voltar) {
+                    Text("←", fontSize = 26.sp, color = NukWhite)
+                }
+            }
             IconButton(onClick = onMenuClick) {
                 Text("☰", fontSize = 22.sp, color = NukWhite)
             }

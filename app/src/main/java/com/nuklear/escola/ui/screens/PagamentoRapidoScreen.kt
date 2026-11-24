@@ -25,7 +25,7 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PagamentoRapidoScreen(onMenuClick: () -> Unit) {
+fun PagamentoRapidoScreen(onMenuClick: () -> Unit, onRecibo: (Long) -> Unit = {}) {
     val ctx = LocalContext.current
     val db = remember { AppDatabase.get(ctx) }
     val scope = rememberCoroutineScope()
@@ -76,7 +76,7 @@ fun PagamentoRapidoScreen(onMenuClick: () -> Unit) {
             confirmButton = {
                 Button(onClick = {
                     scope.launch {
-                        db.pagamentoDao().insert(Pagamento(
+                        val novoId = db.pagamentoDao().insert(Pagamento(
                             alunoId = a.id,
                             dataPagamento = "$pagAno-$pagMes-$pagDia",
                             competencia = competencia,
@@ -85,10 +85,11 @@ fun PagamentoRapidoScreen(onMenuClick: () -> Unit) {
                             observacao = if (comprovanteUri != null) "$obs [Comprovante: $comprovanteUri]" else obs
                         ))
                         showConfirmDialog = false
-                        Toast.makeText(ctx, "✅ Pagamento de ${a.nome} registrado!", Toast.LENGTH_LONG).show()
-                        // Resetar
+                        Toast.makeText(ctx, "✅ Pagamento de ${a.nome} registrado!", Toast.LENGTH_SHORT).show()
+                        // Limpa o formulário (a tela fica pronta para o próximo pagamento)
                         alunoSelecionado = null; busca = ""; valor = ""; obs = ""; comprovanteUri = null
-                        statusText = "✅ Último: ${a.nome} — R$ $valor — $competencia"
+                        // Vai direto para o recibo; a seta "←" volta para cá
+                        onRecibo(novoId)
                     }
                 }, colors = ButtonDefaults.buttonColors(containerColor = NukGreen)) {
                     Text("💾 CONFIRMAR", fontWeight = FontWeight.Bold)

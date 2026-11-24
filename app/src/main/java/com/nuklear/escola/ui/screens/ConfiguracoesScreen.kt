@@ -6,6 +6,10 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.room.withTransaction
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import com.nuklear.escola.security.PinStore
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -179,6 +183,67 @@ fun ConfiguracoesScreen(onMenuClick: () -> Unit) {
         )
     }
 
+    // ─── Trava por PIN ───
+    var pinAtivo by remember { mutableStateOf(PinStore.temPin(ctx)) }
+    var showPinDialog by remember { mutableStateOf(false) }
+    var pinNovo by remember { mutableStateOf("") }
+    var pinConfirma by remember { mutableStateOf("") }
+
+    if (showPinDialog) {
+        AlertDialog(
+            onDismissRequest = { showPinDialog = false },
+            title = { Text("🔒 Definir PIN", color = NukPurple) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Use de 4 a 8 números e ANOTE o PIN. Se esquecer, só dá para entrar " +
+                        "apagando os dados do app (aí restaure pelo backup).",
+                        color = NukLightGray, fontSize = 12.sp
+                    )
+                    OutlinedTextField(
+                        value = pinNovo,
+                        onValueChange = { pinNovo = it.filter { c -> c.isDigit() }.take(8) },
+                        label = { Text("Novo PIN") }, singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = NukPurple, unfocusedBorderColor = NukMedGray,
+                            focusedTextColor = NukWhite, unfocusedTextColor = NukWhite)
+                    )
+                    OutlinedTextField(
+                        value = pinConfirma,
+                        onValueChange = { pinConfirma = it.filter { c -> c.isDigit() }.take(8) },
+                        label = { Text("Repita o PIN") }, singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = NukPurple, unfocusedBorderColor = NukMedGray,
+                            focusedTextColor = NukWhite, unfocusedTextColor = NukWhite)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (pinNovo.length < 4) {
+                        Toast.makeText(ctx, "O PIN precisa ter pelo menos 4 números", Toast.LENGTH_SHORT).show()
+                    } else if (pinNovo != pinConfirma) {
+                        Toast.makeText(ctx, "Os dois PINs não são iguais", Toast.LENGTH_SHORT).show()
+                    } else {
+                        PinStore.definir(ctx, pinNovo)
+                        pinAtivo = true
+                        showPinDialog = false
+                        Toast.makeText(ctx, "🔒 PIN ativado", Toast.LENGTH_SHORT).show()
+                    }
+                }, colors = ButtonDefaults.buttonColors(containerColor = NukGreen)) { Text("Salvar") }
+            },
+            dismissButton = {
+                Button(onClick = { showPinDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = NukMedGray)) { Text("Cancelar") }
+            },
+            containerColor = NukDarkGray
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         NukTopBar("⚙️ Configurações", onMenuClick)
 
@@ -191,7 +256,7 @@ fun ConfiguracoesScreen(onMenuClick: () -> Unit) {
         ) {
             // ─── Info do App ───
             NukCard {
-                Text("☢ Escola Nuklear v1.0", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NukPurple)
+                Text("☢ Escola Nuklear v1.1.0", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NukPurple)
                 Text("Gestão completa de academia", fontSize = 12.sp, color = NukLightGray)
                 Text("Réplica do CT João Filho IA v3.2", fontSize = 11.sp, color = NukLightGray)
             }
@@ -262,6 +327,34 @@ fun ConfiguracoesScreen(onMenuClick: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().height(46.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = NukPurple)
                 ) { Text("🥋 Importar graduacoes.csv") }
+            }
+
+            // ─── TRAVA POR PIN ───
+            NukCard {
+                SectionTitle("TRAVA POR PIN", "🔒")
+                Text(
+                    if (pinAtivo) "PIN ativo: o app pede o PIN ao abrir e depois de 3 minutos fora dele."
+                    else "Sem PIN: quem pegar o celular desbloqueado vê os dados dos alunos.",
+                    fontSize = 12.sp, color = NukLightGray,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Button(
+                    onClick = { pinNovo = ""; pinConfirma = ""; showPinDialog = true },
+                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = NukPurple)
+                ) { Text(if (pinAtivo) "🔑 Trocar PIN" else "🔒 Ativar PIN") }
+                if (pinAtivo) {
+                    Spacer(Modifier.height(4.dp))
+                    Button(
+                        onClick = {
+                            PinStore.remover(ctx)
+                            pinAtivo = false
+                            Toast.makeText(ctx, "PIN removido", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = NukMedGray)
+                    ) { Text("Remover PIN") }
+                }
             }
 
             // ─── BACKUP JSON ───

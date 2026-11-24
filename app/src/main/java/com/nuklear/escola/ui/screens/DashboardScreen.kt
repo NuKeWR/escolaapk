@@ -1,6 +1,7 @@
 package com.nuklear.escola.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -26,7 +27,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun DashboardScreen(onMenuClick: () -> Unit) {
+fun DashboardScreen(onMenuClick: () -> Unit, onNavigate: (String) -> Unit = {}) {
     val ctx = LocalContext.current
     val db = remember { AppDatabase.get(ctx) }
     val scope = rememberCoroutineScope()
@@ -102,19 +103,19 @@ fun DashboardScreen(onMenuClick: () -> Unit) {
 
             // Stats row 1
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCard("Total Alunos", "$totalAlunos", NukPurple, Modifier.weight(1f))
-                StatCard("Kids", "$totalKids", NukBlue, Modifier.weight(1f))
-                StatCard("Adultos", "$totalAdultos", NukBlack, Modifier.weight(1f))
+                StatCard("Total Alunos", "$totalAlunos", NukPurple, Modifier.weight(1f).clickable { onNavigate("alunos") })
+                StatCard("Kids", "$totalKids", NukBlue, Modifier.weight(1f).clickable { onNavigate("alunos") })
+                StatCard("Adultos", "$totalAdultos", NukBlack, Modifier.weight(1f).clickable { onNavigate("alunos") })
             }
 
             // Stats row 2
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCard("Presentes Hoje", "$presentesHoje", NukGreen, Modifier.weight(1f))
-                StatCard("Inadimplentes", "$atrasados", NukRedDark, Modifier.weight(1f))
+                StatCard("Presentes Hoje", "$presentesHoje", NukGreen, Modifier.weight(1f).clickable { onNavigate("presencas") })
+                StatCard("Inadimplentes", "$atrasados", NukRedDark, Modifier.weight(1f).clickable { onNavigate("inadimplentes") })
             }
 
-            // Financeiro
-            NukCard {
+            // Financeiro (toque para ver o histórico financeiro)
+            NukCard(modifier = Modifier.clickable { onNavigate("historico") }) {
                 SectionTitle("FINANCEIRO DO MÊS", "💰")
                 Text("Receita Prevista: R$ ${"%.2f".format(receitaPrevista)}",
                     fontSize = 13.sp, color = NukWhite)
@@ -145,9 +146,9 @@ fun DashboardScreen(onMenuClick: () -> Unit) {
                 }
             }
 
-            // Aniversariantes
+            // Aniversariantes (toque para ver a lista completa)
             if (aniversariantes.isNotEmpty()) {
-                NukCard {
+                NukCard(modifier = Modifier.clickable { onNavigate("aniversariantes") }) {
                     SectionTitle("ANIVERSARIANTES DO MÊS", "🎂")
                     aniversariantes.forEach { a ->
                         Text("${a.nome} — ${a.dataNascimento}", fontSize = 13.sp, color = NukWhite)
