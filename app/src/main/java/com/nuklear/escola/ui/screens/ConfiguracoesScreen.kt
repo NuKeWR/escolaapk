@@ -6,6 +6,15 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.room.withTransaction
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Warning
+import com.nuklear.escola.data.Perfil
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -36,9 +45,14 @@ import java.io.InputStreamReader
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+/** Aba Perfil: dados de quem usa o app, atalhos para as outras telas e as configurações. */
 @Composable
-fun ConfiguracoesScreen(onMenuClick: () -> Unit) {
+fun ConfiguracoesScreen(onMenuClick: () -> Unit, onNavigate: (String) -> Unit = {}) {
     val ctx = LocalContext.current
+    var nomePerfil by remember { mutableStateOf(Perfil.nome(ctx)) }
+    val versao = remember {
+        try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "" } catch (e: Exception) { "" }
+    }
     val db = remember { AppDatabase.get(ctx) }
     val scope = rememberCoroutineScope()
 
@@ -249,7 +263,7 @@ fun ConfiguracoesScreen(onMenuClick: () -> Unit) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        NukTopBar("⚙️ Configurações", onMenuClick)
+        NukTopBar("Perfil", onMenuClick)
 
         Column(
             modifier = Modifier
@@ -258,11 +272,48 @@ fun ConfiguracoesScreen(onMenuClick: () -> Unit) {
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // ─── Info do App ───
+            // ─── Perfil ───
             NukCard {
-                Text("☢ Escola Nuklear v1.1.0", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NukPurple)
-                Text("Gestão completa de academia", fontSize = 12.sp, color = NukLightGray)
-                Text("Réplica do CT João Filho IA v3.2", fontSize = 11.sp, color = NukLightGray)
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Avatar(nome = nomePerfil.ifBlank { "Escola Nuklear" }, tamanho = 56.dp)
+                    Spacer(Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            nomePerfil.ifBlank { "Seu nome" },
+                            fontSize = 18.sp, fontWeight = FontWeight.Bold, color = NukWhite
+                        )
+                        Text(
+                            "Nuklear · Escola de Lutas" + if (versao.isNotBlank()) " · v$versao" else "",
+                            fontSize = 12.sp, color = NukLightGray
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = nomePerfil,
+                    onValueChange = { nomePerfil = it; Perfil.salvarNome(ctx, it) },
+                    label = { Text("Seu nome (aparece no Início)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = NukPurple, unfocusedBorderColor = NukMedGray,
+                        focusedTextColor = NukWhite, unfocusedTextColor = NukWhite,
+                        focusedLabelColor = NukPurple, unfocusedLabelColor = NukLightGray,
+                        cursorColor = NukPurple
+                    )
+                )
+            }
+
+            // ─── Atalhos para o resto do app ───
+            NukCard {
+                SectionTitle("ATALHOS")
+                LinhaAtalho(Icons.Default.PersonAdd, "Cadastrar aluno") { onNavigate("cadastrar") }
+                LinhaAtalho(Icons.Default.Warning, "Pendências de pagamento") { onNavigate("inadimplentes") }
+                LinhaAtalho(Icons.Default.Cake, "Aniversariantes") { onNavigate("aniversariantes") }
+                LinhaAtalho(Icons.Default.Face, "Reconhecimento facial") { onNavigate("reconhecimento") }
+                LinhaAtalho(Icons.Default.Groups, "Cadastro de rostos em lote") { onNavigate("cadastro_lote") }
+                LinhaAtalho(Icons.Default.BarChart, "Relatório de frequência") { onNavigate("relatorio") }
+                LinhaAtalho(Icons.Default.AccountBalanceWallet, "Histórico financeiro") { onNavigate("historico") }
             }
 
             // ─── Estatísticas ───

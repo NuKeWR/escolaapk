@@ -27,20 +27,22 @@ A assinatura vem de 4 segredos do repositório (**Settings → Secrets and varia
    e crie uma `Migration`. Não use `fallbackToDestructiveMigration()`: ele apaga tudo.
 4. Antes de atualizar, faça **Configurações → Exportar Backup JSON**.
 
-## Funcionalidades
+## Telas (visual "NUKLEAR — Premium Dark")
 
-| Tela | O que faz |
+Fundo preto profundo, cartões em grafite, roxo violeta nas ações, branco suave nos textos,
+verde discreto para pagamento confirmado e laranja suave para pendência.
+Cinco abas na barra inferior; as demais telas abrem a partir delas e têm a seta "←" para voltar.
+
+| Aba | O que tem |
 |---|---|
-| Dashboard | Totais, financeiro do mês, status, horários, aniversariantes (cartões levam às telas) |
-| Alunos / Cadastrar / Editar | Cadastro completo com foto, graduações, ativar/inativar |
-| Pagamento rápido | Busca o aluno, registra o pagamento e abre o recibo |
-| Pagamentos / Recibo | Histórico por aluno, edição, recibo em imagem para compartilhar |
-| Inadimplentes | Lista por horário e botão **Cobrar no WhatsApp** |
-| Presenças e relatórios | Presença por data/horário, ranking e frequência mensal |
-| Reconhecimento facial | Presença e cadastro de rostos (câmera), cadastro de rostos em lote |
-| Aniversariantes | Aniversariantes do mês |
-| Histórico financeiro | Receita por mês e por aluno |
-| Configurações | Backup JSON, importações do sistema antigo, **trava por PIN**, **mensagem de cobrança editável** |
+| **Início** | Alunos ativos, receita do mês, presenças de hoje e pendências (cada cartão abre a tela correspondente), acesso rápido (Presença, Pagar, Alunos, Rosto, Relatórios, Aniversários), gráfico das presenças dos últimos 7 dias, alunos por horário e aniversariantes |
+| **Alunos** | Busca, filtros (ativos/inativos/todos e horário), lista com foto ou iniciais, faixa colorida e situação da mensalidade (Em dia, Pendente, Bolsista, Isento); botão **+** para cadastrar; toque no aluno para editar, ver pagamentos e frequência |
+| **Aulas** | Presença da aula em um toque por aluno (data e horário), "Marcar todos", salvar; atalhos para Reconhecimento facial e Relatórios |
+| **Financeiro** | Seletor de mês, total recebido e quanto falta do previsto, alunos em dia x pendentes, últimas movimentações (toque abre o recibo), botão **Registrar pagamento** que termina no recibo |
+| **Perfil** | Seu nome (aparece no Início), atalhos (cadastrar aluno, pendências, aniversariantes, reconhecimento, rostos em lote, relatório, histórico financeiro), mensagem de cobrança do WhatsApp, trava por PIN, backup e importações |
+
+Outras telas internas: Editar aluno, Pagamentos do aluno, Recibo, Pagamento rápido, Inadimplentes
+(com **Cobrar no WhatsApp**), Relatório de frequência, Frequência do aluno, Histórico financeiro.
 
 A mensagem de cobrança usa os campos `{nome}`, `{aluno}`, `{mes}` e `{valor}`, preenchidos para cada aluno.
 
@@ -48,8 +50,8 @@ A mensagem de cobrança usa os campos `{nome}`, `{aluno}`, `{mes}` e `{valor}`, 
 
 ```
 app/src/main/java/com/nuklear/escola/
-├── MainActivity.kt        navegação, menu e trava por PIN
-├── data/                  banco (Room), modelos e mensagem de cobrança
+├── MainActivity.kt        as 5 abas, navegação e trava por PIN
+├── data/                  banco (Room), modelos, perfil e mensagem de cobrança
 ├── face/                  reconhecimento facial (ML Kit + FaceNet)
 ├── notification/          avisos diários
 ├── security/PinStore.kt   PIN do app

@@ -74,6 +74,9 @@ interface PagamentoDao {
     @Query("SELECT COALESCE(SUM(valor_pago), 0) FROM pagamentos WHERE competencia = :comp")
     suspend fun recebidoMes(comp: String): Double
 
+    @Query("SELECT * FROM pagamentos WHERE competencia = :comp ORDER BY data_pagamento DESC, id DESC")
+    suspend fun getByCompetencia(comp: String): List<Pagamento>
+
     @Query("SELECT competencia, COALESCE(SUM(valor_pago), 0) as total FROM pagamentos GROUP BY competencia ORDER BY competencia DESC LIMIT 12")
     suspend fun receitaMensal(): List<ReceitaMensal>
 

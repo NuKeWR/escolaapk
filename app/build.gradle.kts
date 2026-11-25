@@ -14,8 +14,8 @@ android {
         applicationId = "com.nuklear.escola2"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
     }
 
     // Chave de assinatura FIXA, lida das variáveis de ambiente (segredos do GitHub).
